@@ -1,32 +1,31 @@
-apt-get update
-apt-get install -y nginx
+#!/usr/bin/env bash
+# Sets up a web server for deployment of web_static
 
-mkdir -p /data/web_static/releases/test/
-mkdir -p /data/web_static/shared/
-echo "Holberton School" > /data/web_static/releases/test/index.html
-ln -sf /data/web_static/releases/test/ /data/web_static/current
+if ! command -v nginx &> /dev/null
+then
+	sudo apt-get update
+	sudo apt-get install -y nginx
+fi
 
-chown -R ubuntu /data/
-chgrp -R ubuntu /data/
+sudo mkdir -p /data/web_static/releases/test/
+sudo mkdir -p /data/web_static/shared/
+echo "This a fake file" > /data/web_static/releases/test/index.html
 
-printf %s "server {
-	listen 80 default_server;
-	listen [::]:80 default_server;
-	add_header X-Served-By $HOSTNAME;
-	root   /var/www/html;
-	index  index.html index.htm;
-	location /hbnb_static {
-		alias /data/web_static/current;
-		index index.html index.htm;
-	}
-	location /redirect_me {
-		return 301 http://cuberule.com/;
-	}
-	error_page 404 /404.html;
-	location /404 {
-		root /var/www/html;
-		internal;
-	}
-}" > /etc/nginx/sites-available/default
+# Create symbolic link
+if [ -L /data/web_static/current ];
+then
+	sudo rm -f /data/web_static/current
+fi
+sudo ln -sf /data/web_static/releases/test/ /data/web_static/current
 
-service nginx restart
+# Give ownership of /data/ to ubuntu user and group recursively
+sudo chown -R ubuntu:ubuntu /data/
+
+# Update Nginx configuration
+NGINX_CONFIG="/etc/nginx/sites-available/default"
+sudo sed -i '/server_name _;/a \\n\tlocation /hbnb_static {\n\t\talias /data/web_static/current/;\n\t}\n' $NGINX_CONFIG
+
+# Create symbolic link to enable Nginx configuration
+sudo ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+
+sudo service nginx restart
